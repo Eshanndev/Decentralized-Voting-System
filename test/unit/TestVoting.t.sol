@@ -38,7 +38,7 @@ contract TestVoting is Test {
     function test_setCanditatesWhenAdminCall() public {
         address admin = voting.getAdmin();
         vm.prank(admin);
-        voting.setCandidates(MOCK_CANDITATE_1, MOCK_CANDITATE_2);
+        voting.setCanditates(MOCK_CANDITATE_1, MOCK_CANDITATE_2);
         // this might fail
         //have to set the voting status to CLOSED
     }
@@ -46,7 +46,7 @@ contract TestVoting is Test {
     function test_setCanditatesRevertIfSenderIsNotAdmin() public {
         vm.prank(USER1);
         vm.expectRevert(Voting.notAuthorized.selector);
-        voting.setCandidates(MOCK_CANDITATE_1, MOCK_CANDITATE_2);
+        voting.setCanditates(MOCK_CANDITATE_1, MOCK_CANDITATE_2);
     }
 
     /*///////////////////////////////////////////////

@@ -93,7 +93,7 @@ contract Voting {
         currentVotingStatus = VotingStatus.REGISTERING;
         registerOpenedTime = block.timestamp;
 
-        emit canditatesAdded(canditate_1,canditate_2);
+        emit canditatesAdded(_canditate_1,_canditate_2);
     }
 
     function registerVoting() public {
@@ -120,7 +120,7 @@ contract Voting {
         if (isVoted[msg.sender] == true) {
             revert alreadyVoted();
         }
-        if (_canditateId != currentCanditates[0] && _canditateId != currentCanditates[0]) {
+        if (_canditateId != currentCanditate_1 && _canditateId != currentCanditate_2) {
             revert invalidCanditateId(_canditateId);
         }
         isVoted[msg.sender] = true;
@@ -136,6 +136,8 @@ contract Voting {
     function performUpkeep(bytes memory) public {
         currentVotingStatus = VotingStatus.CLOSED;
     }
+
+    
 
     /*///////////////////////////////////////////////
                 Getter Functions
