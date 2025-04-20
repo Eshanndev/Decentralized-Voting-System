@@ -22,6 +22,8 @@ contract Voting {
     ////////////////////////////////////////////////*/
 
     event canditatesAdded(uint256 canditate_1, uint256 canditate_2);
+    event registeringOpened(uint256 time);
+    event votingOpened(uint256 time);
 
     /*///////////////////////////////////////////////
                 Enums
@@ -44,7 +46,7 @@ contract Voting {
                 Mappings
     ////////////////////////////////////////////////*/
 
-    mapping(uint256 candidateId => int256 voteCount) public voteCounts;
+    mapping(uint256 candidateId => uint256 voteCount) public voteCounts;
     mapping(address => bool) public isVoted;
     mapping(address => bool) public isRegistered;
 
@@ -54,7 +56,7 @@ contract Voting {
 
 
     address[] private qulifiedVoters;
-    VotingStatus public currentVotingStatus = VotingStatus.OPEN;
+    VotingStatus public currentVotingStatus = VotingStatus.ENDED;
     address immutable i_admin;
     // uint256[] public currentCanditates;
     uint256 currentCanditate_1;
@@ -108,6 +110,7 @@ contract Voting {
         registerOpenedTime = block.timestamp;
 
         emit canditatesAdded(_canditate_1,_canditate_2);
+        emit registeringOpened(registerOpenedTime);
     }
 
 
@@ -162,11 +165,11 @@ contract Voting {
     }
 
     function checkUpkeep(bytes calldata) external view returns (bool upkeepNeeded, bytes memory data) {
-        if (block.timestamp - registerOpenedTime >  REGISTERING_OPEN_TIME){
+        if (currentVotingStatus == VotingStatus.REGISTERING && block.timestamp - registerOpenedTime >  REGISTERING_OPEN_TIME){
             upkeepNeeded = true;
             data = abi.encode(AutomationTasks.OPEN_VOTING);
         }
-        else if (block.timestamp - votingOpenedTime > VOTING_OPEN_TIME){
+        else if (currentVotingStatus == VotingStatus.OPEN && block.timestamp - votingOpenedTime > VOTING_OPEN_TIME){
             upkeepNeeded = true;
             data = abi.encode(AutomationTasks.OPEN_COUNTING);
         }
@@ -180,6 +183,7 @@ contract Voting {
         if (task == AutomationTasks.OPEN_VOTING){
             currentVotingStatus = VotingStatus.OPEN;
             votingOpenedTime = block.timestamp;
+            emit votingOpened(votingOpenedTime);
         }
         else if (task == AutomationTasks.OPEN_COUNTING){
             currentVotingStatus = VotingStatus.CLOSED;
@@ -213,5 +217,9 @@ contract Voting {
 
     function getRecentWinner()public view returns(uint256){
         return recentWinner;
+    }
+
+    function getCurrentVotingStatus()public view returns(VotingStatus){
+        return currentVotingStatus;
     }
 }
