@@ -1,7 +1,8 @@
 //SPDX-License-Identifier:MIT
 pragma solidity ^0.8.19;
 
-import {Test, console} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
+import {console} from "forge-std/console.sol";
 import {Voting} from "../../src/voting.sol";
 import {DeployVoting} from "../../script/DeployVoting.s.sol";
 
@@ -10,8 +11,7 @@ contract TestVoting is Test {
     uint256 public MOCK_CANDITATE_1 = 123;
     uint256 public MOCK_CANDITATE_2 = 456;
     uint256 REGISTERING_OPEN_TIME = 3600;
-    
-
+    uint256 VOTING_OPEN_TIME = 3600;
 
     DeployVoting deployVoting = new DeployVoting();
     Voting voting;
@@ -28,68 +28,66 @@ contract TestVoting is Test {
                   Modifiers
     ////////////////////////////////////////////////*/
 
-    modifier userRegistered() {
-        vm.prank(USER1);
-        voting.registerVoting();
-        _;
-    }
-
-    modifier canditatesSet(){
+    modifier canditatesSet() {
         address admin = voting.getAdmin();
         vm.prank(admin);
         voting.setCanditates(MOCK_CANDITATE_1, MOCK_CANDITATE_2);
         _;
     }
 
-    modifier registrationTimePassed(){
+    modifier userRegistered() {
+        vm.prank(USER1);
+        voting.registerVoting();
+        _;
+    }
+
+    modifier registrationTimePassed() {
         vm.warp(block.timestamp + REGISTERING_OPEN_TIME + 1);
         vm.roll(block.number + 1);
         _;
     }
 
-    modifier performUpkeepRanAndVotingOpened(){
+    modifier performUpkeepRanAndVotingOpened() {
         (bool upkeepNeeded, bytes memory data) = voting.checkUpkeep("");
-        if(upkeepNeeded){
+        if (upkeepNeeded) {
             voting.performUpkeep(data);
         }
         _;
     }
 
-    modifier voteForCanditate_1(){
-        _;
+    modifier voteForCanditate_1() {
+        vm.prank(USER1);
         voting.vote(MOCK_CANDITATE_1);
+        _;
     }
 
-    modifier performUpkeepRanAndVotingCounting(){
+    modifier votingTimePassed() {
+        vm.warp(block.timestamp + VOTING_OPEN_TIME + 1);
+        vm.roll(block.number + 1);
+        _;
+    }
+
+    modifier performUpkeepRanAndVotingCounting() {
         (bool upkeepNeeded, bytes memory data) = voting.checkUpkeep("");
-        if(upkeepNeeded){
+        if (upkeepNeeded) {
             voting.performUpkeep(data);
         }
         _;
     }
-
-    // modifier VotingProcessDone(){
-    //     _;
-    // }
 
     /*///////////////////////////////////////////////
                   Test State variables
     ////////////////////////////////////////////////*/
 
-    function test_votingStatusInitializedAsEnded()public view {
+    function test_votingStatusInitializedAsEnded() public view {
         assert(voting.getCurrentVotingStatus() == Voting.VotingStatus.ENDED);
     }
-
-    
 
     /*///////////////////////////////////////////////
                   Test setCanditates
     ////////////////////////////////////////////////*/
 
-    function test_setCanditatesWhenAdminCall() public canditatesSet{
-        
-        
-    }
+    function test_setCanditatesWhenAdminCall() public canditatesSet {}
 
     function test_setCanditatesRevertIfSenderIsNotAdmin() public {
         vm.prank(USER1);
@@ -112,56 +110,65 @@ contract TestVoting is Test {
         voting.registerVoting();
     }
 
-    function test_isRegisteredMappingUpdateWhenRegister()public canditatesSet userRegistered{
+    function test_isRegisteredMappingUpdateWhenRegister() public canditatesSet userRegistered {
         bool isRegistered = voting.isRegistered(USER1);
         assert(isRegistered == true);
     }
-
-
-
-    
 
     /*///////////////////////////////////////////////
                   Test Vote
     ////////////////////////////////////////////////*/
 
-    function test_CanNotVoteIfStatusIsNotOpen()public canditatesSet userRegistered voteForCanditate_1{
+    function test_CanNotVoteIfStatusIsNotOpen() public canditatesSet userRegistered {
         vm.expectRevert(Voting.votingIsNotOpen.selector);
-        
+        voting.vote(MOCK_CANDITATE_1);
     }
 
-    function test_CanNotVoteIfNotRegistered()public canditatesSet registrationTimePassed performUpkeepRanAndVotingOpened voteForCanditate_1{
-        
-
-        
-        
+    function test_CanNotVoteIfNotRegistered()
+        public
+        canditatesSet
+        registrationTimePassed
+        performUpkeepRanAndVotingOpened
+    {
         vm.prank(USER1);
         vm.expectRevert(Voting.notRegisteredForVoting.selector);
-        
+        voting.vote(MOCK_CANDITATE_1);
     }
 
-    function test_canNotVoteIfAlreadyVoted()public canditatesSet userRegistered registrationTimePassed performUpkeepRanAndVotingOpened {
-        
-
-        
+    function test_canNotVoteIfAlreadyVoted()
+        public
+        canditatesSet
+        userRegistered
+        registrationTimePassed
+        performUpkeepRanAndVotingOpened
+    {
         vm.prank(USER1);
         voting.vote(MOCK_CANDITATE_1);
 
         vm.prank(USER1);
         vm.expectRevert(Voting.alreadyVoted.selector);
         voting.vote(MOCK_CANDITATE_1);
-
     }
 
-    function test_canNotVoteIfCabditateIdInvalid()public canditatesSet userRegistered registrationTimePassed performUpkeepRanAndVotingOpened{
-        
-
+    function test_canNotVoteIfCabditateIdInvalid()
+        public
+        canditatesSet
+        userRegistered
+        registrationTimePassed
+        performUpkeepRanAndVotingOpened
+    {
         vm.prank(USER1);
         vm.expectRevert(abi.encodeWithSelector(Voting.invalidCanditateId.selector, 789));
         voting.vote(789);
     }
 
-    function test_voteUpdateIsVoted()public canditatesSet userRegistered registrationTimePassed performUpkeepRanAndVotingOpened{
+    function test_voteUpdateIsVoted()
+        public
+        canditatesSet
+        userRegistered
+        registrationTimePassed
+        performUpkeepRanAndVotingOpened
+    {
         vm.prank(USER1);
         voting.vote(MOCK_CANDITATE_1);
 
@@ -169,8 +176,13 @@ contract TestVoting is Test {
         assert(isVoted == true);
     }
 
-    function test_voteIncreaseVotingCount()public canditatesSet userRegistered registrationTimePassed performUpkeepRanAndVotingOpened{
-
+    function test_voteIncreaseVotingCount()
+        public
+        canditatesSet
+        userRegistered
+        registrationTimePassed
+        performUpkeepRanAndVotingOpened
+    {
         uint256 startingVoteCount = voting.voteCounts(MOCK_CANDITATE_1);
 
         vm.prank(USER1);
@@ -178,15 +190,77 @@ contract TestVoting is Test {
 
         uint256 endingVoteCount = voting.voteCounts(MOCK_CANDITATE_1);
 
-        assert(endingVoteCount == startingVoteCount +1);
-
+        assert(endingVoteCount == startingVoteCount + 1);
     }
 
     /*///////////////////////////////////////////////
                   Test Voting Results
     ////////////////////////////////////////////////*/
 
-    function test_VotingStatusClosedWhenVotingOpenTimePassed()public {
+    function test_VotingStatusEndedWhenVotingTimePassed()
+        public
+        canditatesSet
+        userRegistered
+        registrationTimePassed
+        performUpkeepRanAndVotingOpened
+        voteForCanditate_1
+        votingTimePassed
+        performUpkeepRanAndVotingCounting
+    {
+        assert(voting.getCurrentVotingStatus() == Voting.VotingStatus.ENDED);
+    }
 
+    function test_votingResultsRevertIfVotingStatusNotEnded()
+        public
+        canditatesSet
+        userRegistered
+        registrationTimePassed
+        performUpkeepRanAndVotingOpened
+        voteForCanditate_1
+        votingTimePassed
+    {
+        vm.expectRevert(Voting.VotingIsNOtClosedYet.selector);
+        voting.votingResults();
+    }
+
+    function test_canCallVotingResultsIfVotingStatusEnded()
+        public
+        canditatesSet
+        userRegistered
+        registrationTimePassed
+        performUpkeepRanAndVotingOpened
+        voteForCanditate_1
+        votingTimePassed
+        performUpkeepRanAndVotingCounting
+    {}
+
+    function test_votingResultsPickCorrectWinner()
+        public
+        canditatesSet
+        userRegistered
+        registrationTimePassed
+        performUpkeepRanAndVotingOpened
+        voteForCanditate_1
+        votingTimePassed
+        performUpkeepRanAndVotingCounting
+    {
+        assert(voting.getRecentWinner() == MOCK_CANDITATE_1);
+    }
+
+    function test_votingResultsCallResetVotingRound() 
+        public 
+        canditatesSet
+        userRegistered
+        registrationTimePassed
+        performUpkeepRanAndVotingOpened
+        voteForCanditate_1
+        votingTimePassed
+        performUpkeepRanAndVotingCounting
+    {   
+        
+
+        assert(voting.getQulifiedVotersLength() == 0);
+        assert(voting.isVoted(USER1) == false);
+        assert(voting.getCurrentVotingStatus() == Voting.VotingStatus.ENDED);
     }
 }

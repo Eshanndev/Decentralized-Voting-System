@@ -32,11 +32,10 @@ contract Voting {
     enum VotingStatus {
         REGISTERING,
         OPEN,
-        CLOSED,
         ENDED
     }
 
-    enum AutomationTasks{
+    enum AutomationTasks {
         OPEN_REGISTRATION,
         OPEN_VOTING,
         OPEN_COUNTING
@@ -54,21 +53,20 @@ contract Voting {
                 State variables
     ////////////////////////////////////////////////*/
 
-
     address[] private qulifiedVoters;
+    address[]private voters;
     VotingStatus public currentVotingStatus = VotingStatus.ENDED;
     address immutable i_admin;
     // uint256[] public currentCanditates;
     uint256 currentCanditate_1;
     uint256 currentCanditate_2;
-    uint256 recentWinner;
+    uint256 public recentWinner;
     uint256 registerOpenedTime;
     uint256 votingOpenedTime;
-    uint256 constant private REGISTERING_OPEN_TIME = 3600;
-    uint256 constant private VOTING_OPEN_TIME = 3600;
-    
-    uint256 latestWinner;
+    uint256 private constant REGISTERING_OPEN_TIME = 3600;
+    uint256 private constant VOTING_OPEN_TIME = 3600;
 
+    uint256 latestWinner;
 
     constructor() {
         i_admin = msg.sender;
@@ -98,9 +96,8 @@ contract Voting {
         }
 
         currentCanditate_1 = _canditate_1;
-        currentCanditate_2 =_canditate_2;
+        currentCanditate_2 = _canditate_2;
 
-        
         // currentCanditates.push(_canditate_1);
         // currentCanditates.push(_canditate_2);
         voteCounts[_canditate_1] = 0;
@@ -109,10 +106,9 @@ contract Voting {
         currentVotingStatus = VotingStatus.REGISTERING;
         registerOpenedTime = block.timestamp;
 
-        emit canditatesAdded(_canditate_1,_canditate_2);
+        emit canditatesAdded(_canditate_1, _canditate_2);
         emit registeringOpened(registerOpenedTime);
     }
-
 
     function registerVoting() public {
         if (currentVotingStatus != VotingStatus.REGISTERING) {
@@ -142,66 +138,60 @@ contract Voting {
             revert invalidCanditateId(_canditateId);
         }
         isVoted[msg.sender] = true;
+        voters.push(msg.sender);
         voteCounts[_canditateId] += 1;
     }
 
-    function votingResults()public{
-
-        if(currentVotingStatus != VotingStatus.CLOSED){
+    function votingResults() public {
+        if (currentVotingStatus != VotingStatus.ENDED) {
             revert VotingIsNOtClosedYet();
         }
 
-        if (voteCounts[currentCanditate_1] == voteCounts[currentCanditate_2]){
+        if (voteCounts[currentCanditate_1] == voteCounts[currentCanditate_2]) {
             recentWinner = 0;
-        }else if(voteCounts[currentCanditate_1] < voteCounts[currentCanditate_2]){
+        } else if (voteCounts[currentCanditate_1] < voteCounts[currentCanditate_2]) {
             recentWinner = currentCanditate_2;
-        }else {
-            recentWinner =  currentCanditate_1;
+        } else {
+            recentWinner = currentCanditate_1;
         }
-        
         resetVotingRound();
-        currentVotingStatus = VotingStatus.ENDED;
-
     }
 
     function checkUpkeep(bytes calldata) external view returns (bool upkeepNeeded, bytes memory data) {
-        if (currentVotingStatus == VotingStatus.REGISTERING && block.timestamp - registerOpenedTime >  REGISTERING_OPEN_TIME){
+        if (
+            currentVotingStatus == VotingStatus.REGISTERING
+                && block.timestamp - registerOpenedTime > REGISTERING_OPEN_TIME
+        ) {
             upkeepNeeded = true;
             data = abi.encode(AutomationTasks.OPEN_VOTING);
-        }
-        else if (currentVotingStatus == VotingStatus.OPEN && block.timestamp - votingOpenedTime > VOTING_OPEN_TIME){
+        } else if (currentVotingStatus == VotingStatus.OPEN && block.timestamp - votingOpenedTime > VOTING_OPEN_TIME) {
             upkeepNeeded = true;
             data = abi.encode(AutomationTasks.OPEN_COUNTING);
         }
-
     }
-
 
     function performUpkeep(bytes memory performData) public {
         AutomationTasks task = abi.decode(performData, (AutomationTasks));
 
-        if (task == AutomationTasks.OPEN_VOTING){
+        if (task == AutomationTasks.OPEN_VOTING) {
             currentVotingStatus = VotingStatus.OPEN;
             votingOpenedTime = block.timestamp;
             emit votingOpened(votingOpenedTime);
-        }
-        else if (task == AutomationTasks.OPEN_COUNTING){
-            currentVotingStatus = VotingStatus.CLOSED;
+        } else if (task == AutomationTasks.OPEN_COUNTING) {
+            currentVotingStatus = VotingStatus.ENDED;
             votingResults();
         }
     }
 
-    function resetVotingRound()public {
-        for (uint256 i = 0; qulifiedVoters.length< i;i++){
-            address voter = qulifiedVoters[i];
+    function resetVotingRound() public {
+        for (uint256 i = 0; qulifiedVoters.length > i; i++) {
+            address qulifiedVoter = qulifiedVoters[i];
+            address voter = voters[i];
             isVoted[voter] = false;
-            isRegistered[voter] = false;
+            isRegistered[qulifiedVoter] = false;
         }
         qulifiedVoters = new address[](0);
-
     }
-
-    
 
     /*///////////////////////////////////////////////
                 Getter Functions
@@ -211,15 +201,23 @@ contract Voting {
         return qulifiedVoters[index];
     }
 
+    function getVoters(uint256 index)public view returns(address){
+        return voters[index];
+    }
+
+    function getQulifiedVotersLength()public view returns(uint256){
+        return qulifiedVoters.length;
+    }
+
     function getAdmin() public view returns (address) {
         return i_admin;
     }
 
-    function getRecentWinner()public view returns(uint256){
+    function getRecentWinner() public view returns (uint256) {
         return recentWinner;
     }
 
-    function getCurrentVotingStatus()public view returns(VotingStatus){
+    function getCurrentVotingStatus() public view returns (VotingStatus) {
         return currentVotingStatus;
     }
 }
