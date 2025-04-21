@@ -8,6 +8,7 @@ import {DeployVoting} from "../../script/DeployVoting.s.sol";
 
 contract TestVoting is Test {
     address public USER1 = makeAddr("user1");
+    address public USER2 = makeAddr("user2");
     uint256 public MOCK_CANDITATE_1 = 123;
     uint256 public MOCK_CANDITATE_2 = 456;
     uint256 REGISTERING_OPEN_TIME = 3600;
@@ -41,6 +42,12 @@ contract TestVoting is Test {
         _;
     }
 
+    modifier user2Registered() {
+        vm.prank(USER2);
+        voting.registerVoting();
+        _;
+    }
+
     modifier registrationTimePassed() {
         vm.warp(block.timestamp + REGISTERING_OPEN_TIME + 1);
         vm.roll(block.number + 1);
@@ -58,6 +65,18 @@ contract TestVoting is Test {
     modifier voteForCanditate_1() {
         vm.prank(USER1);
         voting.vote(MOCK_CANDITATE_1);
+        _;
+    }
+
+    modifier voteForCanditate_2() {
+        vm.prank(USER1);
+        voting.vote(MOCK_CANDITATE_2);
+        _;
+    }
+
+    modifier voteForCanditate_2_byUSER2() {
+        vm.prank(USER2);
+        voting.vote(MOCK_CANDITATE_2);
         _;
     }
 
@@ -95,9 +114,31 @@ contract TestVoting is Test {
         voting.setCanditates(MOCK_CANDITATE_1, MOCK_CANDITATE_2);
     }
 
+    function test_canNotSetCanditatesIfVotingNotClosed()
+        public
+        canditatesSet
+        userRegistered
+        registrationTimePassed
+        performUpkeepRanAndVotingOpened
+    {
+        address admin = voting.getAdmin();
+        vm.prank(admin);
+        vm.expectRevert(Voting.votingIsNotEnded.selector);
+        voting.setCanditates(MOCK_CANDITATE_1, MOCK_CANDITATE_2);
+    }
+
+    function test_canNotSetCanditatesIfQulifiedVotersArrayNotResetted() public {}
+
     /*///////////////////////////////////////////////
                   Test registerVoting
     ////////////////////////////////////////////////*/
+
+    function test_canNotRegisterIfRegisteringIsNotOpened()public{
+        vm.prank(USER1);
+        vm.expectRevert(Voting.registeringIsNotOpenYet.selector);
+        
+        voting.registerVoting();
+    }
 
     function test_userCanRegisterToVoting() public canditatesSet userRegistered {
         address QulifiedVoter = voting.getQulifiedVoters(0);
@@ -234,7 +275,7 @@ contract TestVoting is Test {
         performUpkeepRanAndVotingCounting
     {}
 
-    function test_votingResultsPickCorrectWinner()
+    function test_votingResultsPickCorrectWinner_1()
         public
         canditatesSet
         userRegistered
@@ -247,8 +288,21 @@ contract TestVoting is Test {
         assert(voting.getRecentWinner() == MOCK_CANDITATE_1);
     }
 
-    function test_votingResultsCallResetVotingRound() 
-        public 
+    function test_votingResultsPickCorrectWinner_2()
+        public
+        canditatesSet
+        userRegistered
+        registrationTimePassed
+        performUpkeepRanAndVotingOpened
+        voteForCanditate_2
+        votingTimePassed
+        performUpkeepRanAndVotingCounting
+    {
+        assert(voting.getRecentWinner() == MOCK_CANDITATE_2);
+    }
+
+    function test_votingResultsCallResetVotingRound()
+        public
         canditatesSet
         userRegistered
         registrationTimePassed
@@ -256,11 +310,43 @@ contract TestVoting is Test {
         voteForCanditate_1
         votingTimePassed
         performUpkeepRanAndVotingCounting
-    {   
-        
-
+    {
         assert(voting.getQulifiedVotersLength() == 0);
         assert(voting.isVoted(USER1) == false);
         assert(voting.getCurrentVotingStatus() == Voting.VotingStatus.ENDED);
+    }
+
+    function test_votingResultsIfVoteCountEquals()
+        public
+        canditatesSet
+        userRegistered
+        user2Registered
+        registrationTimePassed
+        performUpkeepRanAndVotingOpened
+        voteForCanditate_1
+        voteForCanditate_2_byUSER2
+        votingTimePassed
+        performUpkeepRanAndVotingCounting
+    {
+        assert(voting.getRecentWinner() == 0);
+    }
+
+    /*///////////////////////////////////////////////
+                  Test getter functions
+    ////////////////////////////////////////////////*/
+
+    function test_admin() public view {
+        assert(voting.getAdmin() == msg.sender);
+    }
+
+    function test_getVoters()
+        public
+        canditatesSet
+        userRegistered
+        registrationTimePassed
+        performUpkeepRanAndVotingOpened
+        voteForCanditate_1
+    {
+        assert(USER1 == voting.getVoters(0));
     }
 }

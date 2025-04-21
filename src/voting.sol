@@ -54,7 +54,7 @@ contract Voting {
     ////////////////////////////////////////////////*/
 
     address[] private qulifiedVoters;
-    address[]private voters;
+    address[] private voters;
     VotingStatus public currentVotingStatus = VotingStatus.ENDED;
     address immutable i_admin;
     // uint256[] public currentCanditates;
@@ -90,9 +90,6 @@ contract Voting {
     function setCanditates(uint256 _canditate_1, uint256 _canditate_2) public onlyAdmin {
         if (currentVotingStatus != VotingStatus.ENDED) {
             revert votingIsNotEnded();
-        }
-        if (qulifiedVoters.length != 0) {
-            revert qulifiedVotersNotResetted();
         }
 
         currentCanditate_1 = _canditate_1;
@@ -201,11 +198,11 @@ contract Voting {
         return qulifiedVoters[index];
     }
 
-    function getVoters(uint256 index)public view returns(address){
+    function getVoters(uint256 index) public view returns (address) {
         return voters[index];
     }
 
-    function getQulifiedVotersLength()public view returns(uint256){
+    function getQulifiedVotersLength() public view returns (uint256) {
         return qulifiedVoters.length;
     }
 
