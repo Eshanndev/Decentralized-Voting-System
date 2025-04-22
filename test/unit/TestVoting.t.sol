@@ -133,10 +133,10 @@ contract TestVoting is Test {
                   Test registerVoting
     ////////////////////////////////////////////////*/
 
-    function test_canNotRegisterIfRegisteringIsNotOpened()public{
+    function test_canNotRegisterIfRegisteringIsNotOpened() public {
         vm.prank(USER1);
         vm.expectRevert(Voting.registeringIsNotOpenYet.selector);
-        
+
         voting.registerVoting();
     }
 

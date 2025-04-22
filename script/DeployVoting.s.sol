@@ -11,7 +11,8 @@ contract DeployVoting is Script {
         vm.startBroadcast();
         voting = new Voting();
         vm.stopBroadcast();
-
+        //should register an upKeep for this contract programmetically here
+        //and fund it using Link
         return voting;
     }
 }
