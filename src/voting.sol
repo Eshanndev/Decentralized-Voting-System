@@ -70,7 +70,7 @@ contract Voting {
                 State variables
     ////////////////////////////////////////////////*/
 
-    struct resultContainer{
+    struct resultContainer {
         uint256 votingRound;
         uint256 winnerId;
         uint256 voteCount;
@@ -124,7 +124,7 @@ contract Voting {
             revert votingIsNotEnded();
         }
 
-        currentVotingRound ++;
+        currentVotingRound++;
         currentCandidate_1 = _Candidate_1;
         currentCandidate_2 = _Candidate_2;
 
@@ -200,14 +200,15 @@ contract Voting {
         }
 
         votingResultRecords[currentVotingRound] = resultContainer({
-            votingRound:currentVotingRound,
-            winnerId:recentWinner,
-            voteCount:voteCounts[recentWinner],
-            wonByVotes:voters.length - voteCounts[recentWinner]
-
+            votingRound: currentVotingRound,
+            winnerId: recentWinner,
+            voteCount: voteCounts[recentWinner],
+            wonByVotes: voters.length - voteCounts[recentWinner]
         });
 
-        emit WinnerPicked (currentVotingRound,recentWinner,voteCounts[recentWinner],voters.length - voteCounts[recentWinner]);
+        emit WinnerPicked(
+            currentVotingRound, recentWinner, voteCounts[recentWinner], voters.length - voteCounts[recentWinner]
+        );
 
         resetVotingRound();
     }

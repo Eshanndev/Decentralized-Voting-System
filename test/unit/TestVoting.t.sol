@@ -138,7 +138,7 @@ contract TestVoting is Test {
 
     // function test_canNotSetCandidatesIfQulifiedVotersArrayNotResetted() public {}
 
-    function test_VotingRoundIdUpdateWhenSetCandidates()public {
+    function test_VotingRoundIdUpdateWhenSetCandidates() public {
         assert(voting.currentVotingRound() == 0);
 
         address admin = voting.getAdmin();
@@ -349,7 +349,6 @@ contract TestVoting is Test {
         assert(voting.getRecentWinner() == 0);
     }
 
-    
     function test_VotingResultsAddResultsToMapping()
         public
         CandidatesSet
@@ -360,12 +359,10 @@ contract TestVoting is Test {
         votingTimePassed
         performUpkeepRanAndVotingCounting
     {
-        (uint256 votingRound, uint256 winnerId , uint256 voteCount , ) = voting.votingResultRecords(1);
+        (uint256 votingRound, uint256 winnerId, uint256 voteCount,) = voting.votingResultRecords(1);
         assert(votingRound == voting.currentVotingRound());
         assert(winnerId == voting.getRecentWinner());
         assert(voteCount == 1);
-
-
     }
 
     function test_votingResultsEmitsWinnerPickedEvent()
@@ -376,7 +373,7 @@ contract TestVoting is Test {
         performUpkeepRanAndVotingOpened
         voteForCandidate_1
         votingTimePassed
-    {   
+    {
         uint256 votingRoundId = 1;
         uint256 winnerId = MOCK_Candidate_1;
         uint256 voteCount = 1;
@@ -386,10 +383,9 @@ contract TestVoting is Test {
         if (!upkeepNeeded) {
             revert();
         }
-        vm.expectEmit(true , true, false , false);
-        emit WinnerPicked(votingRoundId,winnerId,voteCount,wonByVotes);
+        vm.expectEmit(true, true, false, false);
+        emit WinnerPicked(votingRoundId, winnerId, voteCount, wonByVotes);
         voting.performUpkeep(data);
-
     }
     /*///////////////////////////////////////////////
                   Test getter functions
