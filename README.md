@@ -1,66 +1,74 @@
-## Foundry
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+# Decentralized Voting System
 
-Foundry consists of:
+This is a decentralized voting system built using Solidity, with integration of Chainlink Automation for automatic state transitions. The system allows users to register, vote, and view results for two candidates. It utilizes Forge for testing.
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+## Features
 
-## Documentation
+- **Registration**: Users can register to vote during the registration phase.
+- **Voting**: Registered users can vote for one of the two candidates.
+- **Chainlink Automation**: Automatically transitions between registration, voting, and result calculation phases.
+- **Solidity**: Smart contract written in Solidity.
+- **Forge Testing**: Comprehensive tests written using Foundry's Forge framework.
 
-https://book.getfoundry.sh/
+## Installation
+
+1. **Clone the repository**:
+    ```bash
+    git clone <repository-url>
+    cd <repository-name>
+    ```
+
+2. **Install Foundry** (if not already installed):
+    ```bash
+    curl -L https://foundry.paradigm.xyz | bash
+    foundryup
+    ```
+
+3. **Install dependencies**:
+    ```bash
+    forge install
+    ```
 
 ## Usage
 
-### Build
+### Deploying the Contract
 
-```shell
-$ forge build
+1. **Set Candidates**:
+    You can set two candidates by running the following script:
+
+    ```bash
+    forge script script/SetCandidates.s.sol --broadcast
+    ```
+
+### Running Tests
+
+You can run tests using Forge to ensure the contract is functioning correctly:
+
+```bash
+forge test
 ```
 
-### Test
+## Smart Contract
 
-```shell
-$ forge test
-```
+The `Voting.sol` smart contract provides functionality for:
 
-### Format
+- **Setting up candidates**.
+- **Registering voters**.
+- **Casting votes**.
+- **Determining the winner**.
 
-```shell
-$ forge fmt
-```
+### Key Functions
 
-### Gas Snapshots
+- `setCandidates`: Sets two candidates for the election.
+- `registerVoting`: Registers the caller as a voter.
+- `vote`: Casts a vote for a candidate.
+- `votingResults`: Calculates the winner based on votes.
 
-```shell
-$ forge snapshot
-```
+## Chainlink Automation
 
-### Anvil
+Chainlink Automation is used to automatically transition between the registration, voting, and result calculation phases after certain time intervals.
 
-```shell
-$ anvil
-```
+## License
 
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
