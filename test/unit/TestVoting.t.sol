@@ -7,6 +7,8 @@ import {Voting} from "../../src/voting.sol";
 import {DeployVoting} from "../../script/DeployVoting.s.sol";
 
 contract TestVoting is Test {
+    event WinnerPicked(uint256 indexed votingRoundId, uint256 indexed winnerId, uint256 voteCount, uint256 wonByVotes);
+
     address public USER1 = makeAddr("user1");
     address public USER2 = makeAddr("user2");
     uint256 public MOCK_Candidate_1 = 123;
@@ -134,7 +136,16 @@ contract TestVoting is Test {
         voting.setCandidates(MOCK_Candidate_1, MOCK_Candidate_2);
     }
 
-    function test_canNotSetCandidatesIfQulifiedVotersArrayNotResetted() public {}
+    // function test_canNotSetCandidatesIfQulifiedVotersArrayNotResetted() public {}
+
+    function test_VotingRoundIdUpdateWhenSetCandidates()public {
+        assert(voting.currentVotingRound() == 0);
+
+        address admin = voting.getAdmin();
+        vm.prank(admin);
+        voting.setCandidates(MOCK_Candidate_1, MOCK_Candidate_2);
+        assert(voting.currentVotingRound() == 1);
+    }
 
     /*///////////////////////////////////////////////
                   Test registerVoting
@@ -338,6 +349,48 @@ contract TestVoting is Test {
         assert(voting.getRecentWinner() == 0);
     }
 
+    
+    function test_VotingResultsAddResultsToMapping()
+        public
+        CandidatesSet
+        userRegistered
+        registrationTimePassed
+        performUpkeepRanAndVotingOpened
+        voteForCandidate_1
+        votingTimePassed
+        performUpkeepRanAndVotingCounting
+    {
+        (uint256 votingRound, uint256 winnerId , uint256 voteCount , ) = voting.votingResultRecords(1);
+        assert(votingRound == voting.currentVotingRound());
+        assert(winnerId == voting.getRecentWinner());
+        assert(voteCount == 1);
+
+
+    }
+
+    function test_votingResultsEmitsWinnerPickedEvent()
+        public
+        CandidatesSet
+        userRegistered
+        registrationTimePassed
+        performUpkeepRanAndVotingOpened
+        voteForCandidate_1
+        votingTimePassed
+    {   
+        uint256 votingRoundId = 1;
+        uint256 winnerId = MOCK_Candidate_1;
+        uint256 voteCount = 1;
+        uint256 wonByVotes = 1;
+
+        (bool upkeepNeeded, bytes memory data) = voting.checkUpkeep("");
+        if (!upkeepNeeded) {
+            revert();
+        }
+        vm.expectEmit(true , true, false , false);
+        emit WinnerPicked(votingRoundId,winnerId,voteCount,wonByVotes);
+        voting.performUpkeep(data);
+
+    }
     /*///////////////////////////////////////////////
                   Test getter functions
     ////////////////////////////////////////////////*/

@@ -15,6 +15,7 @@ contract Voting {
     event CandidatesAdded(uint256 Candidate_1, uint256 Candidate_2);
     event registeringOpened(uint256 time);
     event votingOpened(uint256 time);
+    event WinnerPicked(uint256 indexed votingRoundId, uint256 indexed winnerId, uint256 voteCount, uint256 wonByVotes);
 
     /*///////////////////////////////////////////////
                 Errors
@@ -62,9 +63,19 @@ contract Voting {
     // Tracks if an address has registered to vote
     mapping(address => bool) public isRegistered;
 
+    //Track previous Voting Round Results
+    mapping(uint256 => resultContainer) public votingResultRecords;
+
     /*///////////////////////////////////////////////
                 State variables
     ////////////////////////////////////////////////*/
+
+    struct resultContainer{
+        uint256 votingRound;
+        uint256 winnerId;
+        uint256 voteCount;
+        uint256 wonByVotes;
+    }
 
     address[] private qulifiedVoters;
     address[] private voters;
@@ -75,6 +86,7 @@ contract Voting {
     uint256 public recentWinner;
     uint256 registerOpenedTime;
     uint256 votingOpenedTime;
+    uint256 public currentVotingRound = 0;
     uint256 private constant REGISTERING_OPEN_TIME = 3600;
     uint256 private constant VOTING_OPEN_TIME = 3600;
 
@@ -112,6 +124,7 @@ contract Voting {
             revert votingIsNotEnded();
         }
 
+        currentVotingRound ++;
         currentCandidate_1 = _Candidate_1;
         currentCandidate_2 = _Candidate_2;
 
@@ -185,6 +198,17 @@ contract Voting {
         } else {
             recentWinner = currentCandidate_1;
         }
+
+        votingResultRecords[currentVotingRound] = resultContainer({
+            votingRound:currentVotingRound,
+            winnerId:recentWinner,
+            voteCount:voteCounts[recentWinner],
+            wonByVotes:voters.length - voteCounts[recentWinner]
+
+        });
+
+        emit WinnerPicked (currentVotingRound,recentWinner,voteCounts[recentWinner],voters.length - voteCounts[recentWinner]);
+
         resetVotingRound();
     }
 
