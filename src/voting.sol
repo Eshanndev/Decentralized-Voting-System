@@ -1,7 +1,21 @@
 //SPDX-License-Identifier:MIT
 pragma solidity ^0.8.19;
+/**
+ * @title Voting System Project
+ * @author Eshan
+ * @notice A decentralized voting system where an admin can register candidates and users can register and vote.
+ * @dev Handles candidate setup, user registration, voting, result calculation, and Chainlink Automation-based state transitions.
+ */
 
 contract Voting {
+    /*///////////////////////////////////////////////
+                Events
+    ////////////////////////////////////////////////*/
+
+    event CandidatesAdded(uint256 Candidate_1, uint256 Candidate_2);
+    event registeringOpened(uint256 time);
+    event votingOpened(uint256 time);
+
     /*///////////////////////////////////////////////
                 Errors
     ////////////////////////////////////////////////*/
@@ -13,28 +27,22 @@ contract Voting {
     error votingIsNotEnded();
     error notAuthorized();
     error alreadyVoted();
-    error invalidCanditateId(uint256 id);
+    error invalidCandidateId(uint256 id);
     error notRegisteredForVoting();
     error qulifiedVotersNotResetted();
-
-    /*///////////////////////////////////////////////
-                Events
-    ////////////////////////////////////////////////*/
-
-    event canditatesAdded(uint256 canditate_1, uint256 canditate_2);
-    event registeringOpened(uint256 time);
-    event votingOpened(uint256 time);
 
     /*///////////////////////////////////////////////
                 Enums
     ////////////////////////////////////////////////*/
 
+    // Represents the phase of voting
     enum VotingStatus {
         REGISTERING,
         OPEN,
         ENDED
     }
 
+    // Represents tasks to trigger via automation
     enum AutomationTasks {
         OPEN_REGISTRATION,
         OPEN_VOTING,
@@ -45,8 +53,13 @@ contract Voting {
                 Mappings
     ////////////////////////////////////////////////*/
 
+    // Maps candidate ID to number of votes received
     mapping(uint256 candidateId => uint256 voteCount) public voteCounts;
+
+    // Tracks if an address has already voted
     mapping(address => bool) public isVoted;
+
+    // Tracks if an address has registered to vote
     mapping(address => bool) public isRegistered;
 
     /*///////////////////////////////////////////////
@@ -55,18 +68,15 @@ contract Voting {
 
     address[] private qulifiedVoters;
     address[] private voters;
-    VotingStatus public currentVotingStatus = VotingStatus.ENDED;
+    VotingStatus public currentVotingStatus = VotingStatus.ENDED; // Initial state
     address immutable i_admin;
-    // uint256[] public currentCanditates;
-    uint256 currentCanditate_1;
-    uint256 currentCanditate_2;
+    uint256 currentCandidate_1;
+    uint256 currentCandidate_2;
     uint256 public recentWinner;
     uint256 registerOpenedTime;
     uint256 votingOpenedTime;
     uint256 private constant REGISTERING_OPEN_TIME = 3600;
     uint256 private constant VOTING_OPEN_TIME = 3600;
-
-    uint256 latestWinner;
 
     constructor() {
         i_admin = msg.sender;
@@ -76,6 +86,7 @@ contract Voting {
                 Modifiers
     ////////////////////////////////////////////////*/
 
+    // Restricts access to admin-only functions
     modifier onlyAdmin() {
         if (msg.sender != i_admin) {
             revert notAuthorized();
@@ -87,26 +98,38 @@ contract Voting {
                 Functions
     ////////////////////////////////////////////////*/
 
-    function setCanditates(uint256 _canditate_1, uint256 _canditate_2) public onlyAdmin {
+    /**
+     * @notice Allows the admin to set up two candidates and open the registration phase.
+     * @dev Initializes candidate IDs and their corresponding vote counts to 0.
+     * Transitions the voting status to `REGISTERING` and stores the timestamp.
+     * Emits {CandidatesAdded} and {registeringOpened} events.
+     * @param _Candidate_1 ID of the first candidate
+     * @param _Candidate_2 ID of the second candidate
+     * @custom:modifier onlyAdmin Only the admin can call this function
+     */
+    function setCandidates(uint256 _Candidate_1, uint256 _Candidate_2) public onlyAdmin {
         if (currentVotingStatus != VotingStatus.ENDED) {
             revert votingIsNotEnded();
         }
 
-        currentCanditate_1 = _canditate_1;
-        currentCanditate_2 = _canditate_2;
+        currentCandidate_1 = _Candidate_1;
+        currentCandidate_2 = _Candidate_2;
 
-        // currentCanditates.push(_canditate_1);
-        // currentCanditates.push(_canditate_2);
-        voteCounts[_canditate_1] = 0;
-        voteCounts[_canditate_2] = 0;
+        voteCounts[_Candidate_1] = 0;
+        voteCounts[_Candidate_2] = 0;
 
         currentVotingStatus = VotingStatus.REGISTERING;
         registerOpenedTime = block.timestamp;
 
-        emit canditatesAdded(_canditate_1, _canditate_2);
+        emit CandidatesAdded(_Candidate_1, _Candidate_2);
         emit registeringOpened(registerOpenedTime);
     }
 
+    /**
+     * @notice Registers the caller for voting if the registration phase is open.
+     * @dev Ensures that the user has not already registered.
+     * Emits a {registeringOpened} event when registration opens.
+     */
     function registerVoting() public {
         if (currentVotingStatus != VotingStatus.REGISTERING) {
             revert registeringIsNotOpenYet();
@@ -119,7 +142,13 @@ contract Voting {
         qulifiedVoters.push(msg.sender);
     }
 
-    function vote(uint256 _canditateId) public {
+    /**
+     * @notice Allows a registered user to vote for one of the candidates.
+     * @dev The function checks if voting is open and if the user has registered and hasn't already voted.
+     * @param _CandidateId The candidate ID that the user is voting for.
+     * @custom:reverts If the candidate ID is invalid or the user has already voted.
+     */
+    function vote(uint256 _CandidateId) public {
         if (currentVotingStatus != VotingStatus.OPEN) {
             revert votingIsNotOpen();
         }
@@ -131,29 +160,40 @@ contract Voting {
         if (isVoted[msg.sender] == true) {
             revert alreadyVoted();
         }
-        if (_canditateId != currentCanditate_1 && _canditateId != currentCanditate_2) {
-            revert invalidCanditateId(_canditateId);
+        if (_CandidateId != currentCandidate_1 && _CandidateId != currentCandidate_2) {
+            revert invalidCandidateId(_CandidateId);
         }
         isVoted[msg.sender] = true;
         voters.push(msg.sender);
-        voteCounts[_canditateId] += 1;
+        voteCounts[_CandidateId] += 1;
     }
 
+    /**
+     * @notice Ends the voting process and calculates the result based on the votes.
+     * @dev Resets the voting round after determining the winner.
+     * Emits a {VotingResults} event when voting has concluded.
+     */
     function votingResults() public {
         if (currentVotingStatus != VotingStatus.ENDED) {
             revert VotingIsNOtClosedYet();
         }
 
-        if (voteCounts[currentCanditate_1] == voteCounts[currentCanditate_2]) {
+        if (voteCounts[currentCandidate_1] == voteCounts[currentCandidate_2]) {
             recentWinner = 0;
-        } else if (voteCounts[currentCanditate_1] < voteCounts[currentCanditate_2]) {
-            recentWinner = currentCanditate_2;
+        } else if (voteCounts[currentCandidate_1] < voteCounts[currentCandidate_2]) {
+            recentWinner = currentCandidate_2;
         } else {
-            recentWinner = currentCanditate_1;
+            recentWinner = currentCandidate_1;
         }
         resetVotingRound();
     }
 
+    /**
+     * @notice Checks the upkeep for Chainlink Automation, if registration or voting periods need to be transitioned.
+     * @param data Data passed to the function.
+     * @return upkeepNeeded Whether the upkeep is needed.
+     * @return data Data required for upkeep.
+     */
     function checkUpkeep(bytes calldata) external view returns (bool upkeepNeeded, bytes memory data) {
         if (
             currentVotingStatus == VotingStatus.REGISTERING
@@ -167,6 +207,11 @@ contract Voting {
         }
     }
 
+    /**
+     * @notice Performs the transition between the different voting phases, including opening voting and counting results.
+     * @param performData The data that tells which phase to transition to.
+     * @custom:modifier onlyAdmin Only the admin can trigger this action.
+     */
     function performUpkeep(bytes memory performData) public {
         AutomationTasks task = abi.decode(performData, (AutomationTasks));
 
@@ -179,6 +224,10 @@ contract Voting {
             votingResults();
         }
     }
+    /**
+     * @notice Resets the voting round by clearing all registrations, votes, and resetting the state.
+     * @dev Used after the results have been counted and a new round needs to begin.
+     */
 
     function resetVotingRound() public {
         for (uint256 i = 0; qulifiedVoters.length > i; i++) {
