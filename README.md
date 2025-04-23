@@ -15,8 +15,8 @@ This is a decentralized voting system built using Solidity, with integration of 
 
 1. **Clone the repository**:
     ```bash
-    git clone <repository-url>
-    cd <repository-name>
+    git clone https://github.com/Eshanndev/Decentralized-Voting-System.git
+    cd Decentralized-Voting-System
     ```
 
 2. **Install Foundry** (if not already installed):
